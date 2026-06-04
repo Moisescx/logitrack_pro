@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Error - Logística</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+<div class="max-w-3xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-4">Ha ocurrido un error</h1>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded shadow">
+        <p th:text="${message}">Mensaje de error</p>
+    </div>
+
+    <div class="mt-6">
+        <a th:href="@{/}" class="text-blue-600 hover:underline">Volver al inicio</a>
+    </div>
+</div>
+</body>
+</html>
+

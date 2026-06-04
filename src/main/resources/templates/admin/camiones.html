@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Gestión de Camiones</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+</head>
+
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+<div class="max-w-7xl mx-auto p-6">
+
+    <!-- Botones superiores -->
+    <div class="flex justify-between items-center mb-6">
+        <a th:href="@{/admin}"
+           class="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg shadow transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Volver al Panel
+        </a>
+
+        <button onclick="document.documentElement.classList.toggle('dark')"
+                class="px-3 py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
+            🌓 Cambiar tema
+        </button>
+    </div>
+
+    <h2 class="text-3xl font-bold mb-8 dark:text-white">Gestión de Flota</h2>
+    <div th:if="${success}" class="mb-4 p-3 rounded bg-green-100 text-green-800">
+        <span th:text="${success}"></span>
+    </div>
+    <div th:if="${error}" class="mb-4 p-3 rounded bg-red-100 text-red-800">
+        <span th:text="${error}"></span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Columna Izquierda: Formulario para crear -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700">
+                <h3 class="text-xl font-semibold mb-4 dark:text-white border-b pb-2">Registrar Nuevo Camión</h3>
+
+                <!-- Formulario conectado a Spring -->
+                <form th:action="@{/admin/camiones/nuevo}" method="POST" class="space-y-4">
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Patente /
+                            Placa</label>
+                        <input type="text" name="patente" required placeholder="Ej: AB-CD-12"
+                               class="w-full px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Modelo</label>
+                        <input type="text" name="modelo" required placeholder="Ej: Volvo FH16"
+                               class="w-full px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Capacidad
+                            (Toneladas)</label>
+                        <input type="number" step="0.1" name="capCarga" required placeholder="Ej: 25.5"
+                               class="w-full px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+
+                    <!-- Campo oculto para el estado por defecto -->
+                    <input type="hidden" name="estado" value="disponible">
+
+                    <button type="submit"
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg shadow transition-colors mt-4">
+                        Guardar Camión
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Tabla de camiones -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-x-auto">
+                <h3 class="text-xl font-semibold mb-4 dark:text-white border-b pb-2">Inventario Actual</h3>
+
+                <table class="w-full text-left">
+                    <thead>
+                    <tr class="border-b dark:border-gray-700 text-gray-600 dark:text-gray-300">
+                        <th class="pb-3 pl-2">Placa</th>
+                        <th class="pb-3">Modelo</th>
+                        <th class="pb-3">Capacidad</th>
+                        <th class="pb-3">Estado</th>
+                        <th class="pb-3">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Iteramos sobre la lista de camiones -->
+                    <tr th:each="camion : ${camiones}"
+                        class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                        <td class="py-3 pl-2 font-medium dark:text-white" th:text="${camion.patente}"></td>
+                        <td class="py-3 text-gray-600 dark:text-gray-300" th:text="${camion.modelo}"></td>
+                        <td class="py-3 text-gray-600 dark:text-gray-300"
+                            th:text="${camion.capCarga + ' T'}"></td>
+                        <td class="py-3">
+                            <!-- Badges de colores según el estado -->
+                            <span th:if="${camion.estado == 'disponible'}"
+                                  class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-semibold">Disponible</span>
+                            <span th:if="${camion.estado == 'en_ruta'}"
+                                  class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">En Ruta</span>
+                            <span th:if="${camion.estado == 'mantenimiento'}"
+                                  class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-semibold">Taller</span>
+                        </td>
+                        <td class="py-3">
+                            <div class="flex items-center space-x-3">
+                                <a th:href="@{/admin/camiones/editar/{id}(id=${camion.id})}"
+                                   class="text-blue-500 hover:text-blue-700 font-medium text-sm">Editar</a>
+
+                                <form th:action="@{/admin/camiones/eliminar/{id}(id=${camion.id})}" method="post" onsubmit="return confirm('¿Seguro que quieres borrar este camión?');">
+                                    <button type="submit" class="text-red-500 hover:text-red-700 font-medium text-sm">Borrar</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(camiones)}">
+                        <td colspan="5" class="py-4 text-center text-gray-500">No hay camiones registrados.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

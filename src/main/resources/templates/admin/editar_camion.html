@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Editar Camión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+</head>
+
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 flex items-center justify-center min-h-screen">
+
+<div class="w-full max-w-lg bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700">
+
+    <div class="flex justify-between items-center mb-6 border-b pb-4 dark:border-slate-700">
+        <h2 class="text-2xl font-bold dark:text-white">Editar Camión</h2>
+        <a th:href="@{/admin/camiones}"
+           class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </a>
+    </div>
+    <div th:if="${success}" class="mb-4 p-3 rounded bg-green-100 text-green-800">
+        <span th:text="${success}"></span>
+    </div>
+    <div th:if="${error}" class="mb-4 p-3 rounded bg-red-100 text-red-800">
+        <span th:text="${error}"></span>
+    </div>
+
+    <form th:action="@{/admin/camiones/editar/{id}(id=${camion.id})}" method="POST" class="space-y-5">
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Patente / Placa</label>
+            <!-- th:value carga el dato actual -->
+            <input type="text" name="patente" th:value="${camion.patente}" required
+                   class="w-full px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Modelo</label>
+            <input type="text" name="modelo" th:value="${camion.modelo}" required
+                   class="w-full px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Capacidad (Toneladas)</label>
+            <input type="number" step="0.1" name="capCarga" th:value="${camion.capCarga}" required
+                   class="w-full px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div class="flex gap-4 mt-8">
+            <a th:href="@{/admin/camiones}"
+               class="w-1/3 text-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2.5 rounded-lg shadow transition-colors">
+                Cancelar
+            </a>
+            <button type="submit"
+                    class="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg shadow transition-colors">
+                Guardar Cambios
+            </button>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

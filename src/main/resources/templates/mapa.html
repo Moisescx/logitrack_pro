@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS - Flota Logística</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+    <style>
+        /* Hacemos que el mapa ocupe toda la pantalla menos la cabecera */
+        #miMapa { height: calc(100vh - 80px); width: 100%; border-radius: 0.5rem; z-index: 1;}
+    </style>
+
+    <!-- Cargador dinámico para Leaflet Routing Machine: si falla, degradamos a líneas rectas -->
+    <script>
+        window.ROUTING_MACHINE_AVAILABLE = false;
+        (function(){
+            var s = document.createElement('script');
+            s.src = 'https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js';
+            s.onload = function(){ window.ROUTING_MACHINE_AVAILABLE = (typeof L !== 'undefined' && typeof L.Routing !== 'undefined'); };
+            s.onerror = function(){ window.ROUTING_MACHINE_AVAILABLE = false; console.warn('Leaflet Routing Machine failed to load'); };
+            document.head.appendChild(s);
+        })();
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900">
+
+<div class="h-20 bg-slate-800 text-white flex items-center justify-between px-6 shadow-lg relative z-10">
+    <div class="flex items-center gap-3">
+        <span class="text-2xl">🌍</span>
+        <h1 class="text-xl font-bold">Torre de Control GPS <span th:text="'(' + ${rol} + ')'"
+                                                                 class="text-sm font-normal text-gray-400"></span></h1>
+    </div>
+
+    <a th:href="@{${rol == 'ADMIN' ? '/admin' : (rol == 'DESPACHADOR' ? '/despachador' : '/chofer')}}"
+       class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow font-medium transition-colors">
+        Volver al Panel
+    </a>
+</div>
+
+<div class="p-4">
+    <div id="miMapa" class="shadow-2xl"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- MAGIA: Conectamos Java con JavaScript -->
+<script th:inline="javascript">
+    const rutas = /*[[${rutas}]]*/ [];
+
+    const coordenadasCiudades = {
+        "Santiago": [-33.4489, -70.6693],
+        "Valparaíso": [-33.0456, -71.6202],
+        "Concepción": [-36.8201, -73.0444],
+        "Antofagasta": [-23.6500, -70.4000],
+        "Temuco": [-38.7359, -72.5904],
+        "La Serena": [-29.9027, -71.2519],
+        "Iquique": [-20.2133, -70.1503]
+    };
+
+    const map = L.map('miMapa').setView([-30.0, -70.0], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Ícono para el Camión / Origen
+    function obtenerIconoLogistico(estado, tieneCamion) {
+        let color = 'green';
+        if (estado === 'pendiente' && !tieneCamion) color = 'red';
+        else if (estado === 'pendiente' && tieneCamion) color = 'gold';
+
+        return new L.Icon({
+            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+    }
+
+    // Ícono para la Meta / Destino (Negro)
+    const iconoDestino = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+    });
+
+    // Grupo para guardar todos los pines y líneas, y centrar la cámara al final
+    const grupoRutas = L.featureGroup().addTo(map);
+
+    rutas.forEach((ruta, index) => {
+        const origenCoords = coordenadasCiudades[ruta.origen];
+        const destinoCoords = coordenadasCiudades[ruta.destino];
+
+        if (origenCoords && destinoCoords) {
+            const tieneCamion = ruta.camion != null;
+            const esActiva = ruta.estado === 'en_progreso';
+            const icono = obtenerIconoLogistico(ruta.estado, tieneCamion);
+            const colorLinea = esActiva ? '#2563eb' : '#94a3b8'; // Azul fuerte o Gris suave
+
+            // 1. DIBUJAR PINES (Origen y Destino)
+            let popupOrigen = `
+                <div style="font-family: sans-serif; min-width: 200px;">
+                    <h3 style="margin: 0 0 8px 0; border-bottom: 2px solid #ccc; padding-bottom: 5px; color: #333;">📍 ${ruta.origen} ➔ ${ruta.destino}</h3>
+                    <p style="margin: 4px 0; font-size: 14px;"><b>Camión:</b> ${tieneCamion ? ruta.camion.patente : '<span style="color:red; font-weight:bold;">SIN ASIGNAR</span>'}</p>
+                    <p style="margin: 4px 0; font-size: 14px;"><b>Estado:</b> <span style="text-transform: uppercase; font-weight: bold;">${ruta.estado}</span></p>
+                </div>
+            `;
+
+            L.marker(origenCoords, {icon: icono}).bindPopup(popupOrigen).addTo(grupoRutas);
+            L.marker(destinoCoords, {icon: iconoDestino}).bindPopup(`<b>🏁 Destino: ${ruta.destino}</b>`).addTo(grupoRutas);
+
+            // 2. PLAN B: LÍNEA RECTA PUNTEADA (Garantiza que siempre verás la conexión)
+            L.polyline([origenCoords, destinoCoords], {
+                color: colorLinea,
+                weight: 3,
+                dashArray: '5, 10', // Hace que la línea sea punteada
+                opacity: 0.7
+            }).addTo(grupoRutas);
+
+            // 3. INTENTO DE CARRETERA REAL (Se ejecuta con retraso para no saturar)
+            setTimeout(() => {
+                try {
+                    if (window.ROUTING_MACHINE_AVAILABLE && typeof L.Routing !== 'undefined') {
+                        L.Routing.control({
+                            waypoints: [
+                                L.latLng(origenCoords[0], origenCoords[1]),
+                                L.latLng(destinoCoords[0], destinoCoords[1])
+                            ],
+                            lineOptions: {
+                                styles: [{ color: colorLinea, opacity: 0.9, weight: 6 }]
+                            },
+                            createMarker: function() { return null; }, // No sobreescribir nuestros pines
+                            addWaypoints: false, routeWhileDragging: false, draggableWaypoints: false, fitSelectedRoutes: false, show: false
+                        }).addTo(map);
+                    } else {
+                        // Routing not available; keep the straight dotted polyline already drawn
+                    }
+                } catch (e) {
+                    console.warn("Routing machine error, usando línea recta.", e);
+                }
+            }, index * 1000);
+        }
+    });
+    // 4. MAGIA DE CÁMARA: Ajustamos el zoom automáticamente para ver toda la operación
+    try {
+        if (grupoRutas.getLayers().length > 0) {
+            map.fitBounds(grupoRutas.getBounds(), { padding: [40, 40] });
+        }
+    } catch (e) {
+        console.warn('No se pudo ajustar el zoom automáticamente:', e);
+    }
+</script>
+</body>
+</html>
