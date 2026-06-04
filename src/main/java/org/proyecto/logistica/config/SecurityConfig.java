@@ -23,6 +23,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/css/**", "/js/**", "/login", "/error").permitAll()
+                        // API REST - públicamente accesible (sin autenticación por ahora)
+                        .requestMatchers("/api/v1/**").permitAll()
+                        // WebSocket - públicamente accesible
+                        .requestMatchers("/ws/**").permitAll()
+                        // Endpoints web - requieren rol
                         .requestMatchers("/chofer/**", "/api/rutas/**").hasRole("CHOFER")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/despachador/**").hasRole("DESPACHADOR")

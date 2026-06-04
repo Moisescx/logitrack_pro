@@ -43,6 +43,22 @@ public class Camion {
     @LastModifiedDate
     private LocalDateTime fechaActualizacion;
 
+    // GPS Tracking - Nuevos campos
+    @Column(name = "latitud_actual")
+    private Double latitudActual;
+
+    @Column(name = "longitud_actual")
+    private Double longitudActual;
+
+    @Column(name = "velocidad")
+    private Double velocidad = 0.0; // km/h
+
+    @Column(name = "distancia_total_recorrida")
+    private Double distanciaTotalRecorrida = 0.0; // en km
+
+    @Column(name = "tiempo_ultima_ubicacion")
+    private LocalDateTime tiempoUltimaUbicacion;
+
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
     }
