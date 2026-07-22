@@ -13,6 +13,11 @@
     <style>
         /* Hacemos que el mapa ocupe toda la pantalla menos la cabecera */
         #miMapa { height: calc(100vh - 80px); width: 100%; border-radius: 0.5rem; z-index: 1;}
+
+        /* 🔥 SOLUCIÓN 1: Ocultar el panel de instrucciones feo de Leaflet Routing Machine */
+        .leaflet-routing-container {
+            display: none !important;
+        }
     </style>
 
     <!-- Cargador dinámico para Leaflet Routing Machine: si falla, degradamos a líneas rectas -->
@@ -114,42 +119,61 @@
             L.marker(origenCoords, {icon: icono}).bindPopup(popupOrigen).addTo(grupoRutas);
             L.marker(destinoCoords, {icon: iconoDestino}).bindPopup(`<b>🏁 Destino: ${ruta.destino}</b>`).addTo(grupoRutas);
 
-            // 2. PLAN B: LÍNEA RECTA PUNTEADA (Garantiza que siempre verás la conexión)
-            L.polyline([origenCoords, destinoCoords], {
+            // 🔥 SOLUCIÓN 2: Guardamos la línea recta en una variable para poder borrarla después
+            let lineaRecta = L.polyline([origenCoords, destinoCoords], {
                 color: colorLinea,
                 weight: 3,
-                dashArray: '5, 10', // Hace que la línea sea punteada
+                dashArray: '5, 10',
                 opacity: 0.7
             }).addTo(grupoRutas);
 
-            // 3. INTENTO DE CARRETERA REAL (Se ejecuta con retraso para no saturar)
+            // 3. INTENTO DE CARRETERA REAL
             setTimeout(() => {
                 try {
                     if (window.ROUTING_MACHINE_AVAILABLE && typeof L.Routing !== 'undefined') {
-                        L.Routing.control({
+                        // Guardamos el control en una variable
+                        let controlRuta = L.Routing.control({
                             waypoints: [
                                 L.latLng(origenCoords[0], origenCoords[1]),
                                 L.latLng(destinoCoords[0], destinoCoords[1])
                             ],
+                            // Truco del servidor alemán para evitar bloqueos
+                            router: L.Routing.osrmv1({
+                                serviceUrl: 'https://routing.openstreetmap.de/routed-car/route/v1'
+                            }),
                             lineOptions: {
                                 styles: [{ color: colorLinea, opacity: 0.9, weight: 6 }]
                             },
-                            createMarker: function() { return null; }, // No sobreescribir nuestros pines
-                            addWaypoints: false, routeWhileDragging: false, draggableWaypoints: false, fitSelectedRoutes: false, show: false
+                            createMarker: function() { return null; },
+                            addWaypoints: false,
+                            routeWhileDragging: false,
+                            draggableWaypoints: false,
+                            fitSelectedRoutes: false,
+                            show: false
                         }).addTo(map);
-                    } else {
-                        // Routing not available; keep the straight dotted polyline already drawn
+
+                        // 🔥 LA MAGIA: Cuando se carga la carretera real, borramos la línea recta
+                        controlRuta.on('routesfound', function(e) {
+                            if (map.hasLayer(lineaRecta)) {
+                                map.removeLayer(lineaRecta);
+                            }
+                        });
+
                     }
                 } catch (e) {
-                    console.warn("Routing machine error, usando línea recta.", e);
+                    console.warn("Routing machine error, manteniendo línea recta.", e);
                 }
-            }, index * 1000);
+            }, (index + 1) * 1500);
         }
     });
-    // 4. MAGIA DE CÁMARA: Ajustamos el zoom automáticamente para ver toda la operación
+
+    // 4. MAGIA DE CÁMARA
     try {
         if (grupoRutas.getLayers().length > 0) {
-            map.fitBounds(grupoRutas.getBounds(), { padding: [40, 40] });
+            // Le damos un pequeño retraso para asegurar que los elementos estén en el mapa
+            setTimeout(() => {
+                map.fitBounds(grupoRutas.getBounds(), { padding: [40, 40] });
+            }, 500);
         }
     } catch (e) {
         console.warn('No se pudo ajustar el zoom automáticamente:', e);

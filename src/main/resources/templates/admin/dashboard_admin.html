@@ -21,6 +21,10 @@
             <span>📊</span> Panel Administrador
         </h2>
         <div class="flex gap-3 items-center">
+            <a th:href="@{/admin/auditoria}"
+               class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
+                <span>📋</span> Auditoría
+            </a>
             <button onclick="document.documentElement.classList.toggle('dark')"
                     class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-medium transition-colors">
                 🌓 Modo
@@ -30,7 +34,8 @@
                 🗺️ Ver Mapa
             </a>
             <form th:action="@{/logout}" method="post" class="inline">
-                <button type="submit" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                <button type="submit"
+                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
                     Salir
                 </button>
             </form>
@@ -157,5 +162,139 @@
 
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- WIDGET DE AdminIA (BURBUJA FLOTANTE)      -->
+<!-- ========================================== -->
+<div id="chatbot-container" class="fixed bottom-6 right-6 z-50 font-sans">
+
+    <!-- Ventana del Chat (Oculta por defecto) -->
+    <div id="chat-window"
+         class="hidden flex-col w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-slate-700 transition-all duration-300 mb-20 origin-bottom-right">
+
+        <!-- Header del Chat -->
+        <div class="bg-purple-600 p-4 text-white flex justify-between items-center shadow-md z-10">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">👨‍💼</span>
+                <div>
+                    <h3 class="font-bold text-sm">AdminIA</h3>
+                    <p class="text-xs text-purple-200">Análisis Estratégico</p>
+                </div>
+            </div>
+            <button onclick="toggleChat()"
+                    class="text-white hover:text-gray-200 focus:outline-none transition-transform hover:scale-110">
+                ✖
+            </button>
+        </div>
+
+        <!-- Área de Mensajes -->
+        <div id="chat-messages" class="p-4 h-80 overflow-y-auto bg-gray-50 dark:bg-slate-900 flex flex-col gap-3">
+            <!-- Mensaje inicial de la IA -->
+            <div class="self-start bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-100 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm shadow-sm">
+                ¡Hola Admin! Soy tu asistente de análisis estratégico. Pregúntame sobre métricas, eficiencia de rutas, optimizaciones y desempeño de la flota.
+            </div>
+        </div>
+
+        <!-- Área de Input (Escribir mensaje) -->
+        <div class="p-3 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex gap-2 items-center">
+            <input type="text" id="chat-input" placeholder="Pregunta sobre tu flota..."
+                   class="flex-1 px-4 py-2 text-sm rounded-full border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                   onkeydown="handleKeyPress(event)">
+            <button onclick="sendMessage()" id="send-btn"
+                    class="bg-purple-600 hover:bg-purple-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-105 shadow-md">
+                ➤
+            </button>
+        </div>
+    </div>
+
+    <!-- Botón Flotante (La Burbuja) -->
+    <button onclick="toggleChat()" id="chat-bubble-btn"
+            class="absolute bottom-0 right-0 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-transform hover:scale-110 focus:outline-none ring-4 ring-purple-600/30">
+        💼
+    </button>
+</div>
+
+<!-- Script de lógica para el Chat -->
+<script>
+    // Mostrar/Ocultar la ventana del chat
+    function toggleChat() {
+        const chatWindow = document.getElementById('chat-window');
+        if (chatWindow.classList.contains('hidden')) {
+            chatWindow.classList.remove('hidden');
+            chatWindow.classList.add('flex');
+        } else {
+            chatWindow.classList.add('hidden');
+            chatWindow.classList.remove('flex');
+        }
+    }
+
+    // Permitir enviar con la tecla "Enter"
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+
+    // Función principal para enviar y recibir mensajes
+    async function sendMessage() {
+        const inputField = document.getElementById('chat-input');
+        const messageText = inputField.value.trim();
+        if (!messageText) return; // No enviar mensajes vacíos
+
+        const messagesContainer = document.getElementById('chat-messages');
+
+        // 1. Dibujar el mensaje del ADMIN en la pantalla (Alineado a la derecha)
+        const userMessageHTML = `
+                <div class="self-end bg-purple-600 text-white p-3 rounded-tl-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm shadow-sm">
+                    ${messageText}
+                </div>
+            `;
+        messagesContainer.insertAdjacentHTML('beforeend', userMessageHTML);
+        inputField.value = ''; // Limpiar el input
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto-scroll hacia abajo
+
+        // 2. Mostrar indicador temporal de "Escribiendo..."
+        const typingId = 'typing-' + Date.now();
+        const typingHTML = `
+                <div id="${typingId}" class="self-start bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm italic shadow-sm">
+                    Analizando datos...
+                </div>
+            `;
+        messagesContainer.insertAdjacentHTML('beforeend', typingHTML);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // 3. Conectar con tu Backend (Spring AI Admin Endpoint)
+        try {
+            const response = await fetch('/api/chat/admin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mensaje: messageText})
+            });
+
+            const data = await response.json();
+
+            // 4. Borrar el indicador de "escribiendo..." y mostrar la respuesta de la IA (Alineado a la izquierda)
+            document.getElementById(typingId).remove();
+
+            const aiMessageHTML = `
+                    <div class="self-start bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-100 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm shadow-sm whitespace-pre-wrap">${data.respuesta.trim()}</div>
+                `;
+            messagesContainer.insertAdjacentHTML('beforeend', aiMessageHTML);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        } catch (error) {
+            // Si hay error (ej. sin internet), avisar al admin
+            document.getElementById(typingId).remove();
+            const errorHTML = `
+                    <div class="self-start bg-red-100 text-red-700 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm shadow-sm">
+                        ⚠️ Error de conexión. AdminIA no está disponible.
+                    </div>
+                `;
+            messagesContainer.insertAdjacentHTML('beforeend', errorHTML);
+            console.error('Error en el chat:', error);
+        }
+    }
+</script>
+
 </body>
 </html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Módulo de Auditoría - MoiFleet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8 font-sans dark:bg-gray-900 transition-colors duration-200">
+
+<div class="max-w-4xl mx-auto">
+    <!-- Cabecera -->
+    <div class="flex items-center gap-4 mb-8">
+        <a href="/admin"
+           class="text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors text-3xl">←</a>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Centro de Auditoría</h1>
+            <p class="text-gray-600 dark:text-gray-400">Exportación de datos y métricas del sistema</p>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Opciones -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Tarjeta 1: Exportar Rutas -->
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
+            <div class="text-4xl mb-4">🛣️</div>
+            <h2 class="text-xl font-bold mb-2 text-gray-800 dark:text-white">Historial de Rutas</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Descarga un reporte completo con todos los viajes
+                generados, sus orígenes, destinos y estados actuales.</p>
+            <a href="/api/exportar/rutas"
+               class="block text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold transition-colors">
+                Descargar Rutas (CSV)
+            </a>
+        </div>
+
+        <!-- Tarjeta 2: Exportar Logs de Actividad -->
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
+            <div class="text-4xl mb-4">🕵️‍♂️</div>
+            <h2 class="text-xl font-bold mb-2 text-gray-800 dark:text-white">Log de Eventos (Trazabilidad)</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Descarga el registro histórico completo de todas
+                las acciones realizadas por los usuarios en el sistema desde el día 1.</p>
+            <a href="/api/exportar/logs"
+               class="block text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold transition-colors">
+                Descargar Historial (CSV)
+            </a>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

@@ -10,4 +10,6 @@ import java.util.List;
 public interface HistorialRepository extends JpaRepository<Historial, Long> {
 
     List<Historial> findTop10ByOrderByFechaDesc();
+
+    List<Historial> findAllByOrderByFechaDesc();
 }

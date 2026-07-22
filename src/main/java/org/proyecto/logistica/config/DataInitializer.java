@@ -11,6 +11,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
 @Component
 public class DataInitializer implements CommandLineRunner {
     @Autowired
@@ -26,36 +30,86 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
 
         if (usuarioRepository.count() == 0) {
-            System.out.println("🏭 Iniciando inyección de DATOS FIJOS...");
+            System.out.println("🏭 Iniciando inyección de DATOS MASIVOS...");
 
+            // ==========================================
+            // 1. TUS CASOS DE PRUEBA ORIGINALES
+            // ==========================================
             Usuario admin = crearUsuario("admin", "admin123", "ADMIN");
             Usuario despachador1 = crearUsuario("despachador1", "1234", "DESPACHADOR");
 
-            Usuario juan = crearUsuario("juan", "1234", "CHOFER");     // Tendrá camión y rutas
-            Usuario pedro = crearUsuario("pedro", "1234", "CHOFER");   // Tendrá camión, pero 0 rutas (Día libre)
-            Usuario diego = crearUsuario("diego", "1234", "CHOFER");   // No tendrá ni camión asignado
+            Usuario juan = crearUsuario("juan", "1234", "CHOFER");
+            Usuario pedro = crearUsuario("pedro", "1234", "CHOFER");
+            Usuario diego = crearUsuario("diego", "1234", "CHOFER");
 
-            // Camión 1: Para Juan (Listo para trabajar)
             Camion camionJuan = crearCamion("JUAN-99", "Volvo FH", 25.5, "disponible", juan, despachador1);
-            // Camión 2: Para Pedro (Disponible en base, sin viajes)
             Camion camionPedro = crearCamion("PEDR-88", "Scania R", 18.0, "disponible", pedro, despachador1);
-            // Camión 3: En taller (No se puede usar)
             Camion camionTaller = crearCamion("FAIL-00", "Iveco", 15.0, "mantenimiento", null, despachador1);
 
-
-            // Caso A: Ruta para Juan que ya está EN PROGRESO (Para probar el botón Finalizar)
-            crearRuta("Santiago", "Valparaíso", "en_progreso", camionJuan);
-
-            // Caso B: Ruta para Juan que está PENDIENTE (Para probar el botón Iniciar)
+            crearRuta("Santiago", "Valparaíso", "pendiente", camionJuan);
             crearRuta("Concepción", "Temuco", "pendiente", camionJuan);
-
-            // Caso C: Ruta "Huérfana" PENDIENTE sin camión (Para que el despachador la asigne)
             crearRuta("Antofagasta", "Iquique", "pendiente", null);
 
-            System.out.println("✅ Datos fijos inyectados. Todo listo para probar.");
+            // ==========================================
+            // 2. INYECCIÓN MASIVA ALEATORIA
+            // ==========================================
+            System.out.println("🚀 Generando flota y rutas adicionales...");
+
+            Random random = new Random();
+            List<Camion> camionesActivos = new ArrayList<>();
+            camionesActivos.add(camionJuan);
+            camionesActivos.add(camionPedro);
+
+            // A. Crear 15 Choferes y Camiones extra
+            String[] marcas = {"Volvo", "Scania", "Mercedes-Benz", "Iveco", "MAN", "Ford"};
+            String[] estadosCamion = {"disponible", "en_ruta", "mantenimiento"};
+
+            for (int i = 1; i <= 15; i++) {
+                Usuario nuevoChofer = crearUsuario("chofer_" + i, "1234", "CHOFER");
+
+                // Generar patente estilo FLOT-01, FLOT-02...
+                String patente = "FLOT-" + String.format("%02d", i);
+                String modelo = marcas[random.nextInt(marcas.length)];
+
+                // Capacidad aleatoria entre 10 y 30 toneladas
+                double carga = Math.round((10.0 + (random.nextDouble() * 20.0)) * 10.0) / 10.0;
+                String estado = estadosCamion[random.nextInt(estadosCamion.length)];
+
+                Camion nuevoCamion = crearCamion(patente, modelo, carga, estado, nuevoChofer, despachador1);
+
+                // Guardamos los camiones que no están en el taller para darles rutas luego
+                if (!estado.equals("mantenimiento")) {
+                    camionesActivos.add(nuevoCamion);
+                }
+            }
+
+            // B. Crear 100 Rutas históricas y activas
+            String[] ciudades = {"Arica", "Iquique", "Antofagasta", "Copiapó", "La Serena", "Valparaíso", "Santiago", "Rancagua", "Talca", "Chillán", "Concepción", "Temuco", "Valdivia", "Puerto Montt"};
+
+            String[] estadosRuta = {"completado", "pendiente", "pendiente"};
+            for (int i = 1; i <= 100; i++) {
+                String origen = ciudades[random.nextInt(ciudades.length)];
+                String destino = ciudades[random.nextInt(ciudades.length)];
+
+                // Evitar que el origen y destino sean la misma ciudad
+                while (origen.equals(destino)) {
+                    destino = ciudades[random.nextInt(ciudades.length)];
+                }
+
+                String estadoRuta = estadosRuta[random.nextInt(estadosRuta.length)];
+
+                // Asignar un camión aleatorio de la lista de activos
+                Camion camionAsignado = null;
+                if (!estadoRuta.equals("pendiente") || random.nextBoolean()) {
+                    camionAsignado = camionesActivos.get(random.nextInt(camionesActivos.size()));
+                }
+
+                crearRuta(origen, destino, estadoRuta, camionAsignado);
+            }
+
+            System.out.println("✅ ¡Base de datos cargada con 115 rutas y 18 camiones!");
         }
     }
-
 
     private Usuario crearUsuario(String username, String password, String role) {
         Usuario u = new Usuario();
