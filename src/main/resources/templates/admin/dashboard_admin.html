@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Panel Admin | Logística</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -12,61 +15,65 @@
     </script>
 </head>
 
-<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
-<div class="max-w-7xl mx-auto p-6">
-
+<body class="bg-gray-100 text-gray-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
+<div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+ 
     <!-- Navbar / Header -->
-    <div class="flex items-center justify-between mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">
-        <h2 class="text-2xl font-bold flex items-center gap-2">
-            <span>📊</span> Panel Administrador
-        </h2>
-        <div class="flex gap-3 items-center">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-8 card-surface-strong rounded-3xl p-5 border border-gray-200/80 dark:border-gray-700">
+        <div>
+            <div class="brand-badge mb-3">Centro de operaciones</div>
+            <h2 class="text-2xl font-bold flex items-center gap-2 tracking-tight">
+               <span>📊</span> Panel Administrador
+            </h2>
+            <p class="text-sm text-slate-500 mt-1">Monitorea flota, rutas y actividad operativa desde un panel ejecutivo.</p>
+        </div>
+        <div class="flex flex-wrap gap-3 items-center">
             <a th:href="@{/admin/auditoria}"
-               class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
-                <span>📋</span> Auditoría
+               class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
+               <span>📋</span> Auditoría
             </a>
             <button onclick="document.documentElement.classList.toggle('dark')"
-                    class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-medium transition-colors">
-                🌓 Modo
+                   class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-medium transition-colors">
+               🌓 Tema
             </button>
             <a th:href="@{/mapa}"
-               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                🗺️ Ver Mapa
+               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+               🗺️ Ver Mapa
             </a>
             <form th:action="@{/logout}" method="post" class="inline">
-                <button type="submit"
-                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    Salir
-                </button>
+               <button type="submit"
+                       class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+                   Salir
+               </button>
             </form>
         </div>
     </div>
 
     <!-- Tarjetas de Resumen (KPIs con datos extra) -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Camiones</p>
-            <p class="text-3xl font-bold mt-1" th:text="${total_trucks}">0</p>
+        <div class="card-surface rounded-2xl p-5 border border-gray-100 dark:border-slate-700 hover-lift">
+            <p class="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Camiones</p>
+            <p class="text-3xl font-bold mt-1 text-slate-900 dark:text-slate-100" th:text="${total_trucks}">0</p>
             <p class="text-xs text-blue-500 font-medium mt-2">
                 <span th:text="${camionesEnRuta}">0</span> actualmente en ruta
             </p>
         </div>
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Rutas</p>
-            <p class="text-3xl font-bold mt-1" th:text="${total_routes}">0</p>
+        <div class="card-surface rounded-2xl p-5 border border-gray-100 dark:border-slate-700 hover-lift">
+            <p class="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Rutas</p>
+            <p class="text-3xl font-bold mt-1 text-slate-900 dark:text-slate-100" th:text="${total_routes}">0</p>
             <p class="text-xs text-emerald-500 font-medium mt-2">
                 <span th:text="${rutasCompletadas}">0</span> completadas con éxito
             </p>
         </div>
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Choferes</p>
-            <p class="text-3xl font-bold mt-1" th:text="${total_drivers}">0</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Registrados en el sistema</p>
+        <div class="card-surface rounded-2xl p-5 border border-gray-100 dark:border-slate-700 hover-lift">
+            <p class="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Choferes</p>
+            <p class="text-3xl font-bold mt-1 text-slate-900 dark:text-slate-100" th:text="${total_drivers}">0</p>
+            <p class="text-xs text-gray-400 dark:text-slate-400 mt-2">Registrados en el sistema</p>
         </div>
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Despachadores</p>
-            <p class="text-3xl font-bold mt-1" th:text="${total_dispatchers}">0</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Personal administrativo</p>
+        <div class="card-surface rounded-2xl p-5 border border-gray-100 dark:border-slate-700 hover-lift">
+            <p class="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Despachadores</p>
+            <p class="text-3xl font-bold mt-1 text-slate-900 dark:text-slate-100" th:text="${total_dispatchers}">0</p>
+            <p class="text-xs text-gray-400 dark:text-slate-400 mt-2">Personal administrativo</p>
         </div>
     </div>
 
@@ -77,20 +84,20 @@
         <div class="lg:col-span-2 flex flex-col gap-6">
 
             <!-- Camiones Recientes -->
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
+            <div class="card-surface rounded-3xl p-5 border border-gray-100 dark:border-slate-700 hover-lift">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-lg dark:text-white">🚛 Camiones recientes</h3>
+                    <h3 class="section-title dark:text-white">🚛 Camiones recientes</h3>
                     <a th:href="@{/admin/camiones}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Gestionar todos</a>
                 </div>
 
                 <ul th:if="${not #lists.isEmpty(recent_trucks)}" class="text-sm dark:text-gray-300 divide-y dark:divide-slate-700">
                     <li th:each="t : ${recent_trucks}" class="py-3 flex justify-between items-center">
                         <div>
-                            <span class="font-bold text-gray-800 dark:text-white" th:text="${t.patente}"></span>
-                            <span class="text-gray-500 ml-2" th:text="${t.modelo}"></span>
+                            <span class="font-bold text-gray-800 dark:text-slate-100" th:text="${t.patente}"></span>
+                            <span class="text-gray-500 dark:text-slate-400 ml-2" th:text="${t.modelo}"></span>
                         </div>
                         <div class="flex items-center gap-3">
-                            <span class="text-gray-500" th:text="${t.capCarga != null ? t.capCarga + ' T' : '-'}"></span>
+                            <span class="text-gray-500 dark:text-slate-400" th:text="${t.capCarga != null ? t.capCarga + ' T' : '-'}"></span>
                             <span class="px-2 py-1 text-xs font-bold rounded-full"
                                   th:classappend="${t.estado == 'disponible' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : (t.estado == 'en_ruta' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400')}"
                                   th:text="${t.estado}"></span>
@@ -101,18 +108,18 @@
             </div>
 
             <!-- Rutas Recientes -->
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
+            <div class="card-surface rounded-3xl p-5 border border-gray-100 dark:border-slate-700 hover-lift">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-lg dark:text-white">📍 Rutas recientes</h3>
+                    <h3 class="section-title dark:text-white">📍 Rutas recientes</h3>
                     <a th:href="@{/admin/rutas}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Gestionar todas</a>
                 </div>
 
                 <ul th:if="${not #lists.isEmpty(recent_routes)}" class="text-sm dark:text-gray-300 divide-y dark:divide-slate-700">
                     <li th:each="r : ${recent_routes}" class="py-3 flex justify-between items-center">
                         <div class="flex items-center gap-2">
-                            <span class="font-medium text-gray-800 dark:text-gray-200" th:text="${r.origen}"></span>
-                            <span class="text-gray-400">➔</span>
-                            <span class="font-medium text-gray-800 dark:text-gray-200" th:text="${r.destino}"></span>
+                            <span class="font-medium text-gray-800 dark:text-slate-200" th:text="${r.origen}"></span>
+                            <span class="text-gray-400 dark:text-slate-400">➔</span>
+                            <span class="font-medium text-gray-800 dark:text-slate-200" th:text="${r.destino}"></span>
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="text-xs text-gray-500 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded" th:if="${r.camion != null}" th:text="${r.camion.patente}"></span>
@@ -131,9 +138,9 @@
 
         <!-- Columna Derecha (Ocupa 1/3): Log de Actividad -->
         <div class="lg:col-span-1">
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 h-full">
+            <div class="card-surface rounded-3xl p-5 border border-gray-100 dark:border-slate-700 h-full hover-lift">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-700 pb-2">
-                    <h3 class="font-bold text-lg dark:text-white">Log de Actividad</h3>
+                    <h3 class="section-title dark:text-white">Log de Actividad</h3>
                     <!-- Efecto de "En Vivo" -->
                     <span class="relative flex h-3 w-3">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -147,10 +154,10 @@
                         <!-- Punto en la línea de tiempo -->
                         <div class="absolute -left-[9px] top-1.5 w-4 h-4 bg-blue-500 rounded-full border-[3px] border-white dark:border-slate-800"></div>
 
-                        <p class="text-xs text-gray-400 dark:text-gray-500 font-mono mb-1" th:text="${#temporals.format(log.fecha, 'dd/MM/yyyy HH:mm')}"></p>
-                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200" th:text="${log.accion}"></p>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 leading-snug" th:text="${log.detalle}"></p>
-                        <p class="text-xs text-gray-400 mt-2">Usuario: <span class="font-semibold text-gray-500 dark:text-gray-300 capitalize" th:text="${log.usuario}"></span></p>
+                        <p class="text-xs text-gray-400 dark:text-slate-400 font-mono mb-1" th:text="${#temporals.format(log.fecha, 'dd/MM/yyyy HH:mm')}"></p>
+                        <p class="text-sm font-bold text-gray-800 dark:text-slate-100" th:text="${log.accion}"></p>
+                        <p class="text-sm text-gray-600 dark:text-slate-300 mt-1 leading-snug" th:text="${log.detalle}"></p>
+                        <p class="text-xs text-gray-400 mt-2">Usuario: <span class="font-semibold text-gray-500 dark:text-slate-300 capitalize" th:text="${log.usuario}"></span></p>
                     </div>
 
                     <div th:if="${#lists.isEmpty(logs)}" class="pl-5 py-2 text-sm text-gray-500 italic">
@@ -295,6 +302,35 @@
         }
     }
 </script>
+<script>
+    let adminStompClient = null;
 
+    function conectarAdmin() {
+        // Nos conectamos a la misma ruta de tu WebSocketConfig
+        let socket = new SockJS('/ws/location');
+        adminStompClient = Stomp.over(socket);
+
+        // Desactivar logs molestos en consola
+        adminStompClient.debug = null;
+
+        adminStompClient.connect({}, function (frame) {
+            console.log('Panel Admin conectado a la red de emergencias.');
+
+            // Nos suscribimos al megáfono del servidor
+            adminStompClient.subscribe('/topic/emergencias', function (mensaje) {
+                const alerta = JSON.parse(mensaje.body);
+
+                // 1. Mostrar una alerta visual fuerte en la pantalla
+                alert("🚨 ¡EMERGENCIA EN RUTA!\n\nVehículo: " + alerta.patente + "\nChofer: " + alerta.chofer + "\nProblema: " + alerta.tipoProblema);
+
+                // 2. Recargar la página automáticamente para actualizar la tabla del Log
+                window.location.reload();
+            });
+        });
+    }
+
+    // Iniciar conexión al abrir el panel admin
+    conectarAdmin();
+</script>
 </body>
 </html>

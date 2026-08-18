@@ -54,6 +54,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <!-- MAGIA: Conectamos Java con JavaScript -->
+<!-- MAGIA: Conectamos Java con JavaScript -->
 <script th:inline="javascript">
     const rutas = /*[[${rutas}]]*/ [];
 
@@ -94,8 +95,10 @@
         iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
     });
 
-    // Grupo para guardar todos los pines y líneas, y centrar la cámara al final
     const grupoRutas = L.featureGroup().addTo(map);
+
+    // 🔥 LA SOLUCIÓN: Creamos una memoria para no duplicar los pines
+    const coordenadasDibujadas = new Set();
 
     rutas.forEach((ruta, index) => {
         const origenCoords = coordenadasCiudades[ruta.origen];
@@ -107,19 +110,27 @@
             const icono = obtenerIconoLogistico(ruta.estado, tieneCamion);
             const colorLinea = esActiva ? '#2563eb' : '#94a3b8'; // Azul fuerte o Gris suave
 
-            // 1. DIBUJAR PINES (Origen y Destino)
-            let popupOrigen = `
-                <div style="font-family: sans-serif; min-width: 200px;">
-                    <h3 style="margin: 0 0 8px 0; border-bottom: 2px solid #ccc; padding-bottom: 5px; color: #333;">📍 ${ruta.origen} ➔ ${ruta.destino}</h3>
-                    <p style="margin: 4px 0; font-size: 14px;"><b>Camión:</b> ${tieneCamion ? ruta.camion.patente : '<span style="color:red; font-weight:bold;">SIN ASIGNAR</span>'}</p>
-                    <p style="margin: 4px 0; font-size: 14px;"><b>Estado:</b> <span style="text-transform: uppercase; font-weight: bold;">${ruta.estado}</span></p>
-                </div>
-            `;
+            // 1. DIBUJAR PIN DE ORIGEN (Solo si no existe ya en esas coordenadas)
+            const llaveOrigen = `${origenCoords[0]},${origenCoords[1]}`;
+            if (!coordenadasDibujadas.has(llaveOrigen)) {
+                let popupOrigen = `
+                    <div style="font-family: sans-serif; min-width: 150px;">
+                        <h3 style="margin: 0 0 8px 0; border-bottom: 2px solid #ccc; padding-bottom: 5px; color: #333;">📍 Origen: ${ruta.origen}</h3>
+                        <p style="margin: 4px 0; font-size: 14px;">Punto de salida registrado.</p>
+                    </div>
+                `;
+                L.marker(origenCoords, {icon: icono}).bindPopup(popupOrigen).addTo(grupoRutas);
+                coordenadasDibujadas.add(llaveOrigen); // Guardar en memoria
+            }
 
-            L.marker(origenCoords, {icon: icono}).bindPopup(popupOrigen).addTo(grupoRutas);
-            L.marker(destinoCoords, {icon: iconoDestino}).bindPopup(`<b>🏁 Destino: ${ruta.destino}</b>`).addTo(grupoRutas);
+            // 2. DIBUJAR PIN DE DESTINO (Solo si no existe ya en esas coordenadas)
+            const llaveDestino = `${destinoCoords[0]},${destinoCoords[1]}`;
+            if (!coordenadasDibujadas.has(llaveDestino)) {
+                L.marker(destinoCoords, {icon: iconoDestino}).bindPopup(`<b>🏁 Destino: ${ruta.destino}</b>`).addTo(grupoRutas);
+                coordenadasDibujadas.add(llaveDestino); // Guardar en memoria
+            }
 
-            // 🔥 SOLUCIÓN 2: Guardamos la línea recta en una variable para poder borrarla después
+            // 3. DIBUJAR LAS LÍNEAS (Las líneas sí se dibujan siempre para cada ruta)
             let lineaRecta = L.polyline([origenCoords, destinoCoords], {
                 color: colorLinea,
                 weight: 3,
@@ -127,17 +138,15 @@
                 opacity: 0.7
             }).addTo(grupoRutas);
 
-            // 3. INTENTO DE CARRETERA REAL
+            // 4. INTENTO DE CARRETERA REAL
             setTimeout(() => {
                 try {
                     if (window.ROUTING_MACHINE_AVAILABLE && typeof L.Routing !== 'undefined') {
-                        // Guardamos el control en una variable
                         let controlRuta = L.Routing.control({
                             waypoints: [
                                 L.latLng(origenCoords[0], origenCoords[1]),
                                 L.latLng(destinoCoords[0], destinoCoords[1])
                             ],
-                            // Truco del servidor alemán para evitar bloqueos
                             router: L.Routing.osrmv1({
                                 serviceUrl: 'https://routing.openstreetmap.de/routed-car/route/v1'
                             }),
@@ -152,7 +161,6 @@
                             show: false
                         }).addTo(map);
 
-                        // 🔥 LA MAGIA: Cuando se carga la carretera real, borramos la línea recta
                         controlRuta.on('routesfound', function(e) {
                             if (map.hasLayer(lineaRecta)) {
                                 map.removeLayer(lineaRecta);
@@ -167,10 +175,9 @@
         }
     });
 
-    // 4. MAGIA DE CÁMARA
+    // 5. MAGIA DE CÁMARA
     try {
         if (grupoRutas.getLayers().length > 0) {
-            // Le damos un pequeño retraso para asegurar que los elementos estén en el mapa
             setTimeout(() => {
                 map.fitBounds(grupoRutas.getBounds(), { padding: [40, 40] });
             }, 500);

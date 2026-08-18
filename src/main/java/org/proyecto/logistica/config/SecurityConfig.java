@@ -27,6 +27,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/**").permitAll()
                         // WebSocket - públicamente accesible
                         .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/ws/location/**").permitAll()
                         // Endpoints web - requieren rol
                         .requestMatchers("/chofer/**", "/api/rutas/**").hasRole("CHOFER")
                         .requestMatchers("/admin/**").hasRole("ADMIN")

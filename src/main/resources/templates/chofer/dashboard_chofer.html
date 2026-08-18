@@ -5,28 +5,34 @@
     <meta charset="UTF-8">
     <title>Panel Chofer</title>
     <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {darkMode: 'class'}
     </script>
 </head>
 
-<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+<body class="bg-gray-100 text-gray-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200">
 
-<div class="max-w-7xl mx-auto p-6">
-
+<div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+ 
     <!-- Cabecera -->
-    <div class="flex items-center justify-between mb-8 border-b pb-4 dark:border-slate-700">
-        <h2 class="text-3xl font-bold">🚛 Panel de Conducción</h2>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-8 card-surface-strong rounded-3xl p-5 border border-slate-200/80 dark:border-slate-700">
+        <div>
+            <div class="brand-badge mb-3">Operación en ruta</div>
+            <h2 class="text-3xl font-bold tracking-tight">🚛 Panel de Conducción</h2>
+            <p class="text-sm text-slate-500 mt-1">Supervisa tus rutas, estados y alertas desde un único panel.</p>
+        </div>
         <div class="flex items-center gap-3">
             <button onclick="document.documentElement.classList.toggle('dark')"
-                    class="px-3 py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm shadow transition-colors">
-                🌓 Cambiar tema
+                    class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm font-medium shadow-sm transition-colors">
+                🌓 Tema
             </button>
 
             <form th:action="@{/logout}" method="post" class="inline">
                 <button type="submit"
-                        class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm shadow transition-colors">
+                        class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium shadow-sm transition-colors">
                     Cerrar sesión
                 </button>
             </form>
@@ -35,16 +41,16 @@
 
     <!-- Panel de Estadísticas (Info del camión) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border-t-4 border-indigo-500 flex flex-col items-center justify-center">
+        <div class="card-surface rounded-3xl p-6 border-t-4 border-indigo-500 flex flex-col items-center justify-center hover-lift">
             <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">Camión Asignado</p>
-            <p class="text-2xl font-bold dark:text-white" th:text="${camion != null ? camion.patente : 'Ninguno'}">
+            <p class="text-2xl font-bold text-slate-900 dark:text-slate-100" th:text="${camion != null ? camion.patente : 'Ninguno'}">
                 AB-CD-12</p>
         </div>
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border-t-4 border-yellow-500 flex flex-col items-center justify-center">
+        <div class="card-surface rounded-3xl p-6 border-t-4 border-yellow-500 flex flex-col items-center justify-center hover-lift">
             <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">Rutas Pendientes</p>
             <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400" th:text="${pendientes}">0</p>
         </div>
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border-t-4 border-green-500 flex flex-col items-center justify-center">
+        <div class="card-surface rounded-3xl p-6 border-t-4 border-green-500 flex flex-col items-center justify-center hover-lift">
             <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">Rutas Completadas</p>
             <p class="text-3xl font-bold text-green-600 dark:text-green-400" th:text="${completadas}">0</p>
         </div>
@@ -52,7 +58,7 @@
 
     <!-- Rutas Asignadas -->
     <div class="flex items-center justify-between mb-6">
-        <h3 class="text-2xl font-semibold text-slate-700 dark:text-slate-300">📋 Tus Rutas Programadas</h3>
+    <h3 class="section-title text-slate-700 dark:text-slate-200">📋 Tus Rutas Programadas</h3>
     </div>
 
     <div th:if="${not #lists.isEmpty(rutas)}">
@@ -60,18 +66,18 @@
 
             <!-- Iteración de rutas LIMPIA -->
             <div th:each="ruta : ${rutas}"
-                 class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-md flex flex-col justify-between border-l-4 transition-all duration-300"
+                 class="card-surface rounded-2xl p-5 flex flex-col justify-between border-l-4 transition-all duration-300 hover-lift"
                  th:classappend="${ruta.estado == 'pendiente' ? 'border-yellow-500' : (ruta.estado == 'en_progreso' ? 'border-blue-500' : 'border-green-500')}">
 
                 <div>
                     <!-- Origen y Destino -->
                     <div class="flex items-center gap-2 mb-2">
                         <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                        <p class="font-medium dark:text-white text-lg" th:text="${ruta.origen}"></p>
+                        <p class="font-medium text-slate-900 dark:text-slate-100 text-lg" th:text="${ruta.origen}"></p>
                     </div>
                     <div class="flex items-center gap-2 mb-4">
                         <span class="w-2 h-2 rounded-full bg-red-500"></span>
-                        <p class="font-medium dark:text-white text-lg" th:text="${ruta.destino}"></p>
+                        <p class="font-medium text-slate-900 dark:text-slate-100 text-lg" th:text="${ruta.destino}"></p>
                     </div>
 
                     <!-- Badges de estado -->
@@ -86,35 +92,74 @@
                 </div>
 
                 <div class="mt-4 pt-4 border-t dark:border-slate-700">
-                    <!-- Botones si está pendiente -->
-                    <div th:if="${ruta.estado == 'pendiente'}" class="flex items-center justify-between w-full">
-                        <form th:action="@{/chofer/iniciar/{id}(id=${ruta.id})}" method="POST" class="w-full">
-                            <button type="submit"
-                                    class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition-colors">
-                                Iniciar Ruta
-                            </button>
-                        </form>
+
+                    <!-- ============================================== -->
+                    <!-- ESTADO 1: PENDIENTE (Muestra el temporizador)  -->
+                    <!-- ============================================== -->
+                    <div th:if="${ruta.estado == 'pendiente'}" class="flex flex-col gap-2">
+                        <!-- Caja del reloj -->
+                        <div class="text-center bg-gray-50 dark:bg-slate-700 py-2 rounded-lg border border-gray-200 dark:border-slate-600">
+                            <span th:id="'countdown-' + ${ruta.id}" class="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                                Listo para salir
+                            </span>
+                        </div>
+
+                        <!-- Botón Iniciar (Atrapado por JS) -->
+                        <button type="button"
+                                th:id="'start-btn-' + ${ruta.id}"
+                                th:data-route-id="${ruta.id}"
+                                class="start-btn w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition-colors">
+                            Iniciar Ruta
+                        </button>
                     </div>
 
-                    <!-- Botones si está en progreso -->
+                    <!-- ============================================== -->
+                    <!-- ESTADO 2: EN PROGRESO (Muestra barra animada)  -->
+                    <!-- ============================================== -->
                     <div th:if="${ruta.estado == 'en_progreso'}" class="flex flex-col gap-3">
+
+                        <!-- Panel de Progreso y ETA -->
+                        <div class="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600">
+                            <div class="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                <span>Progreso del viaje:</span>
+                                <span th:id="'texto-eta-' + ${ruta.id}" class="text-indigo-600 dark:text-indigo-400">Calculando...</span>
+                            </div>
+                            <!-- Contenedor de la barra -->
+                            <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                                <div th:id="'barra-progreso-' + ${ruta.id}"
+                                     class="bg-indigo-600 h-3 rounded-full transition-all duration-1000 ease-linear"
+                                     style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
                         <div class="flex gap-2">
-                            <form th:action="@{/chofer/finalizar/{id}(id=${ruta.id})}" method="POST" class="flex-1">
-                                <button type="submit"
-                                        class="w-full py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg shadow transition-colors">
-                                    Finalizar
-                                </button>
-                            </form>
-                            <button class="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow transition-colors">
+                            <!-- Botón Finalizar (Gris y bloqueado por defecto, el JS lo enciende) -->
+                            <button type="button"
+                                    th:id="'finalize-btn-' + ${ruta.id}"
+                                    th:data-route-id="${ruta.id}"
+                                    disabled
+                                    class="finalize-btn flex-1 py-2 bg-gray-400 text-white font-semibold rounded-lg shadow transition-colors opacity-50 cursor-not-allowed">
+                                Finalizar
+                            </button>
+
+                            <!-- Botón Emergencia -->
+                            <button type="button"
+                                    th:id="'emergency-btn-' + ${ruta.id}"
+                                    th:data-route-id="${ruta.id}"
+                                    class="emergency-btn flex-1 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow transition-colors">
                                 Emergencia
                             </button>
                         </div>
                     </div>
 
-                    <!-- Mensaje si está completada -->
-                    <div th:if="${ruta.estado == 'completada'}" class="text-center">
+                    <!-- ============================================== -->
+                    <!-- ESTADO 3: COMPLETADA                           -->
+                    <!-- ============================================== -->
+                    <div th:if="${ruta.estado == 'completada'}" class="text-center py-2">
                         <span class="text-green-600 dark:text-green-400 font-bold">¡Viaje Finalizado! 🎉</span>
                     </div>
+
                 </div>
             </div>
 
@@ -122,20 +167,20 @@
     </div>
 
     <div th:if="${#lists.isEmpty(rutas)}"
-         class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-md text-center border dark:border-slate-700">
+         class="card-surface rounded-2xl p-8 text-center border dark:border-slate-700">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none"
              viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        <p class="text-lg text-gray-500 dark:text-gray-400">No tienes rutas asignadas en este momento.</p>
-        <p class="text-sm text-gray-400 mt-2">Relájate o comunícate con tu despachador.</p>
+        <p class="text-lg text-gray-500 dark:text-slate-300">No tienes rutas asignadas en este momento.</p>
+        <p class="text-sm text-gray-400 dark:text-slate-400 mt-2">Relájate o comunícate con tu despachador.</p>
     </div>
 
     <!-- Botón del Mapa -->
     <div class="flex justify-center mt-12 mb-8">
         <a th:href="@{/mapa}"
-           class="inline-flex items-center gap-2 px-8 py-4 bg-slate-800 dark:bg-slate-700 text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-slate-900 dark:hover:bg-slate-600 transition-all transform hover:-translate-y-1">
+           class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-700 dark:to-slate-600 text-white text-lg font-semibold rounded-2xl shadow-lg hover:from-slate-900 hover:to-slate-800 transition-all transform hover:-translate-y-1 hover-lift">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                  stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -197,90 +242,38 @@
     </button>
 </div>
 
-<!-- Script de lógica para el Chat -->
-<script>
-    // Mostrar/Ocultar la ventana del chat
-    function toggleChat() {
-        const chatWindow = document.getElementById('chat-window');
-        // Alternamos las clases de Tailwind para ocultar/mostrar
-        if (chatWindow.classList.contains('hidden')) {
-            chatWindow.classList.remove('hidden');
-            chatWindow.classList.add('flex');
-        } else {
-            chatWindow.classList.add('hidden');
-            chatWindow.classList.remove('flex');
-        }
-    }
+<!-- Fondo oscuro del Modal (Oculto por defecto) -->
+<div id="modal-emergencia" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 transition-opacity">
 
-    // Permitir enviar con la tecla "Enter"
-    function handleKeyPress(event) {
-        if (event.key === 'Enter') {
-            sendMessage();
-        }
-    }
+    <!-- Caja del Pop-up -->
+    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-gray-200 dark:border-slate-700">
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
+            <span>🚨</span> ¿Qué ocurrió?
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Selecciona el problema para notificar a la base inmediatamente.</p>
 
-    // Función principal para enviar y recibir mensajes
-    async function sendMessage() {
-        const inputField = document.getElementById('chat-input');
-        const messageText = inputField.value.trim();
-        if (!messageText) return; // No enviar mensajes vacíos
+        <!-- Opciones rápidas (Data-Driven) -->
+        <div class="flex flex-col gap-3">
+            <button onclick="enviarAlerta('Neumático Pinchado')" class="w-full text-left px-4 py-3 bg-gray-100 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors border border-transparent hover:border-red-300">
+                🛞 Neumático Pinchado
+            </button>
+            <button onclick="enviarAlerta('Falla de Motor')" class="w-full text-left px-4 py-3 bg-gray-100 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors border border-transparent hover:border-red-300">
+                ⚙️ Falla de Motor
+            </button>
+            <button onclick="enviarAlerta('Sin Combustible')" class="w-full text-left px-4 py-3 bg-gray-100 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors border border-transparent hover:border-red-300">
+                ⛽ Sin Combustible
+            </button>
+            <button onclick="enviarAlerta('Accidente / Choque')" class="w-full text-left px-4 py-3 bg-gray-100 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors border border-transparent hover:border-red-300">
+                💥 Accidente / Choque
+            </button>
+        </div>
 
-        const messagesContainer = document.getElementById('chat-messages');
-
-        // 1. Dibujar el mensaje del CHOFER en la pantalla (Alineado a la derecha)
-        const userMessageHTML = `
-                <div class="self-end bg-blue-600 text-white p-3 rounded-tl-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm shadow-sm">
-                    ${messageText}
-                </div>
-            `;
-        messagesContainer.insertAdjacentHTML('beforeend', userMessageHTML);
-        inputField.value = ''; // Limpiar el input
-        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto-scroll hacia abajo
-
-        // 2. Mostrar indicador temporal de "Escribiendo..."
-        const typingId = 'typing-' + Date.now();
-        const typingHTML = `
-                <div id="${typingId}" class="self-start bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm italic shadow-sm">
-                    Pensando...
-                </div>
-            `;
-        messagesContainer.insertAdjacentHTML('beforeend', typingHTML);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        // 3. Conectar con tu Backend (Spring AI)
-        try {
-            const response = await fetch('/api/chat/chofer', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({mensaje: messageText})
-            });
-
-            const data = await response.json();
-
-            // 4. Borrar el indicador de "escribiendo..." y mostrar la respuesta de la IA (Alineado a la izquierda)
-            document.getElementById(typingId).remove();
-
-            const aiMessageHTML = `
-                    <div class="self-start bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-100 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm shadow-sm whitespace-pre-wrap">${data.respuesta.trim()}</div>
-                `;
-            messagesContainer.insertAdjacentHTML('beforeend', aiMessageHTML);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        } catch (error) {
-            // Si hay error (ej. sin internet), avisar al chofer
-            document.getElementById(typingId).remove();
-            const errorHTML = `
-                    <div class="self-start bg-red-100 text-red-700 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl max-w-[85%] text-sm shadow-sm">
-                        ⚠️ Error de conexión. El copiloto no está disponible.
-                    </div>
-                `;
-            messagesContainer.insertAdjacentHTML('beforeend', errorHTML);
-            console.error('Error en el chat:', error);
-        }
-    }
-</script>
-
+        <button onclick="cerrarModalEmergencia()" class="mt-6 w-full py-2 text-center text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white text-sm font-semibold transition-colors">
+            Cancelar
+        </button>
+    </div>
+</div>
 <!-- Scripts -->
-<script th:src="@{/js/contador.js}"></script>
+<script th:src="@{/js/chofer.js}"></script>
 </body>
 </html>
