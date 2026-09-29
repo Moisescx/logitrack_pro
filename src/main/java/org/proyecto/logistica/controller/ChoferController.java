@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -65,6 +66,7 @@ public class ChoferController {
         Camion camion = ruta.getCamion();
 
         ruta.setEstado("en_progreso");
+        ruta.setStart_time(LocalDateTime.now());
 
         if (camion != null) {
             camion.setEstado("en_ruta");
@@ -81,6 +83,7 @@ public class ChoferController {
         Camion camion = ruta.getCamion();
 
         ruta.setEstado("completada");
+        ruta.setStart_time(null);
 
         if (camion != null) {
             camion.setEstado("disponible");

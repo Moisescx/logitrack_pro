@@ -18,6 +18,37 @@
         .leaflet-routing-container {
             display: none !important;
         }
+
+        .grupo-ubicaciones-icono {
+            background: transparent;
+            border: 0;
+        }
+
+        .grupo-ubicaciones-icono span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border: 3px solid #ffffff;
+            border-radius: 8px;
+            background: #2563eb;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.45);
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .camion-en-movimiento-icono {
+            background: #f59e0b;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.45);
+            color: #111827;
+            font-size: 18px;
+            text-align: center;
+            line-height: 28px;
+        }
     </style>
 
     <!-- Cargador dinámico para Leaflet Routing Machine: si falla, degradamos a líneas rectas -->
@@ -48,10 +79,28 @@
 </div>
 
 <div class="p-4">
+    <div class="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-white p-3 shadow">
+        <input id="filtroMapa" type="search" placeholder="Buscar ciudad o patente..."
+               class="min-w-56 flex-1 rounded border border-slate-300 px-3 py-2 text-sm">
+        <select id="filtroEstado" class="rounded border border-slate-300 px-3 py-2 text-sm">
+            <option value="todos">Todos los estados</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="en_progreso">En progreso</option>
+            <option value="completada">Completadas</option>
+        </select>
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input id="filtroCamion" type="checkbox"> Solo con camión
+        </label>
+        <button id="limpiarFiltros" type="button"
+                class="rounded bg-slate-200 px-3 py-2 text-sm hover:bg-slate-300">Limpiar</button>
+        <span id="resumenMapa" class="text-sm text-slate-500"></span>
+    </div>
     <div id="miMapa" class="shadow-2xl"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
 <!-- MAGIA: Conectamos Java con JavaScript -->
 <!-- MAGIA: Conectamos Java con JavaScript -->
@@ -75,74 +124,92 @@
         attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Ícono para el Camión / Origen
-    function obtenerIconoLogistico(estado, tieneCamion) {
-        let color = 'green';
-        if (estado === 'pendiente' && !tieneCamion) color = 'red';
-        else if (estado === 'pendiente' && tieneCamion) color = 'gold';
+    const grupoRutas = L.featureGroup().addTo(map);
+    const gruposUbicaciones = new Map();
+    const gruposMarcadores = [];
+    const controlesRuteo = [];
+    const marcadoresCamiones = new Map();
+    const clavesRuteadas = new Set();
+    const rutasVisuales = new Map();
 
-        return new L.Icon({
-            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+    function escaparHtml(valor) {
+        return String(valor ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function registrarUbicacion(ciudad, coordenadas, tipo, ruta) {
+        const clave = `${ciudad}:${coordenadas[0]},${coordenadas[1]}`;
+        if (!gruposUbicaciones.has(clave)) {
+            gruposUbicaciones.set(clave, {
+                ciudad,
+                coordenadas,
+                puntos: []
+            });
+        }
+
+        gruposUbicaciones.get(clave).puntos.push({
+            tipo,
+            origen: ruta.origen,
+            destino: ruta.destino,
+            estado: ruta.estado,
+            patente: ruta.camion?.patente ?? 'Sin asignar'
         });
     }
 
-    // Ícono para la Meta / Destino (Negro)
-    const iconoDestino = new L.Icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-    });
+    function coordenadasValidas(latitud, longitud) {
+        return Number.isFinite(latitud) && Number.isFinite(longitud)
+            && latitud >= -90 && latitud <= 90 && longitud >= -180 && longitud <= 180;
+    }
 
-    const grupoRutas = L.featureGroup().addTo(map);
+    function obtenerCoordenadasRuta(ruta, tipo) {
+        const esOrigen = tipo === 'origen';
+        const latitud = esOrigen ? ruta.latitudInicio : ruta.latitudFin;
+        const longitud = esOrigen ? ruta.longitudInicio : ruta.longitudFin;
+        const ciudad = esOrigen ? ruta.origen : ruta.destino;
 
-    // 🔥 LA SOLUCIÓN: Creamos una memoria para no duplicar los pines
-    const coordenadasDibujadas = new Set();
+        return coordenadasValidas(latitud, longitud)
+            ? [latitud, longitud]
+            : coordenadasCiudades[ciudad];
+    }
 
     rutas.forEach((ruta, index) => {
-        const origenCoords = coordenadasCiudades[ruta.origen];
-        const destinoCoords = coordenadasCiudades[ruta.destino];
+        const origenCoords = obtenerCoordenadasRuta(ruta, 'origen');
+        const destinoCoords = obtenerCoordenadasRuta(ruta, 'destino');
 
         if (origenCoords && destinoCoords) {
-            const tieneCamion = ruta.camion != null;
             const esActiva = ruta.estado === 'en_progreso';
-            const icono = obtenerIconoLogistico(ruta.estado, tieneCamion);
             const colorLinea = esActiva ? '#2563eb' : '#94a3b8'; // Azul fuerte o Gris suave
 
-            // 1. DIBUJAR PIN DE ORIGEN (Solo si no existe ya en esas coordenadas)
-            const llaveOrigen = `${origenCoords[0]},${origenCoords[1]}`;
-            if (!coordenadasDibujadas.has(llaveOrigen)) {
-                let popupOrigen = `
-                    <div style="font-family: sans-serif; min-width: 150px;">
-                        <h3 style="margin: 0 0 8px 0; border-bottom: 2px solid #ccc; padding-bottom: 5px; color: #333;">📍 Origen: ${ruta.origen}</h3>
-                        <p style="margin: 4px 0; font-size: 14px;">Punto de salida registrado.</p>
-                    </div>
-                `;
-                L.marker(origenCoords, {icon: icono}).bindPopup(popupOrigen).addTo(grupoRutas);
-                coordenadasDibujadas.add(llaveOrigen); // Guardar en memoria
+            registrarUbicacion(ruta.origen, origenCoords, 'Origen', ruta);
+            registrarUbicacion(ruta.destino, destinoCoords, 'Destino', ruta);
+
+            // La línea de respaldo no se dibuja nunca si el routing real ya está listo.
+            // El fallback solo aparece cuando el router real falla o no está disponible.
+            let lineaRecta = null;
+            const claveRuta = `${origenCoords.join(',')}:${destinoCoords.join(',')}`;
+            let rutaVisual = rutasVisuales.get(claveRuta);
+            if (!rutaVisual) {
+                rutaVisual = { rutas: [], control: null, lineaRecta: null };
+                rutasVisuales.set(claveRuta, rutaVisual);
             }
+            rutaVisual.rutas.push(ruta);
 
-            // 2. DIBUJAR PIN DE DESTINO (Solo si no existe ya en esas coordenadas)
-            const llaveDestino = `${destinoCoords[0]},${destinoCoords[1]}`;
-            if (!coordenadasDibujadas.has(llaveDestino)) {
-                L.marker(destinoCoords, {icon: iconoDestino}).bindPopup(`<b>🏁 Destino: ${ruta.destino}</b>`).addTo(grupoRutas);
-                coordenadasDibujadas.add(llaveDestino); // Guardar en memoria
+            // INTENTO DE CARRETERA REAL
+            if (clavesRuteadas.has(claveRuta)) {
+                return;
             }
+            clavesRuteadas.add(claveRuta);
 
-            // 3. DIBUJAR LAS LÍNEAS (Las líneas sí se dibujan siempre para cada ruta)
-            let lineaRecta = L.polyline([origenCoords, destinoCoords], {
-                color: colorLinea,
-                weight: 3,
-                dashArray: '5, 10',
-                opacity: 0.7
-            }).addTo(grupoRutas);
-
-            // 4. INTENTO DE CARRETERA REAL
             setTimeout(() => {
                 try {
-                    if (window.ROUTING_MACHINE_AVAILABLE && typeof L.Routing !== 'undefined') {
-                        let controlRuta = L.Routing.control({
+                    const routingDisponible = window.ROUTING_MACHINE_AVAILABLE && typeof L !== 'undefined' && typeof L.Routing !== 'undefined';
+
+                    if (routingDisponible) {
+                        const controlRuta = L.Routing.control({
                             waypoints: [
                                 L.latLng(origenCoords[0], origenCoords[1]),
                                 L.latLng(destinoCoords[0], destinoCoords[1])
@@ -160,22 +227,225 @@
                             fitSelectedRoutes: false,
                             show: false
                         }).addTo(map);
+                        rutaVisual.control = controlRuta;
+                        controlesRuteo.push(rutaVisual);
 
-                        controlRuta.on('routesfound', function(e) {
-                            if (map.hasLayer(lineaRecta)) {
+                        controlRuta.on('routesfound', function() {
+                            if (lineaRecta && map.hasLayer(lineaRecta)) {
                                 map.removeLayer(lineaRecta);
                             }
+                            aplicarFiltrosMapa();
                         });
-
+                        aplicarFiltrosMapa();
+                        return;
                     }
+
+                    // fallback solo si la ruta real no pudo cargar: invisible para no molestar
+                    lineaRecta = L.polyline([origenCoords, destinoCoords], {
+                        color: colorLinea,
+                        weight: 3,
+                        dashArray: '5, 10',
+                        opacity: 0
+                    }).addTo(grupoRutas);
+                    rutaVisual.lineaRecta = lineaRecta;
+                    aplicarFiltrosMapa();
+
                 } catch (e) {
-                    console.warn("Routing machine error, manteniendo línea recta.", e);
+                    console.warn('Routing machine error, manteniendo línea recta.', e);
                 }
             }, (index + 1) * 1500);
         }
     });
 
-    // 5. MAGIA DE CÁMARA
+    gruposUbicaciones.forEach((grupo) => {
+        const origenes = grupo.puntos.filter(punto => punto.tipo === 'Origen').length;
+        const destinos = grupo.puntos.length - origenes;
+        const detalle = grupo.puntos.map((punto, indice) => `
+            <div style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <strong>${indice + 1}. ${escaparHtml(punto.tipo)}</strong>
+                <div>Ruta: ${escaparHtml(punto.origen)} → ${escaparHtml(punto.destino)}</div>
+                <div>Matrícula: <strong>${escaparHtml(punto.patente)}</strong></div>
+                <div>Estado: ${escaparHtml(punto.estado)}</div>
+            </div>
+        `).join('');
+
+        const popup = `
+            <div style="font-family: sans-serif; min-width: 260px; max-height: 320px; overflow-y: auto;">
+                <h3 style="margin: 0 0 8px; color: #1e293b;">${escaparHtml(grupo.ciudad)}</h3>
+                <div style="margin-bottom: 8px;">
+                    <span>📍 Orígenes: <strong>${origenes}</strong></span>
+                    <span style="margin-left: 10px;">🏁 Destinos: <strong>${destinos}</strong></span>
+                </div>
+                ${detalle}
+            </div>
+        `;
+
+        const iconoGrupo = L.divIcon({
+            className: 'grupo-ubicaciones-icono',
+            html: `<span>${grupo.puntos.length}</span>`,
+            iconSize: [38, 38],
+            iconAnchor: [19, 19],
+            popupAnchor: [0, -19]
+        });
+
+        const marcador = L.marker(grupo.coordenadas, {icon: iconoGrupo})
+            .bindPopup(popup)
+            .addTo(grupoRutas);
+        gruposMarcadores.push({marcador, grupo});
+    });
+
+    function agregarMarcadorCamion(ruta) {
+        const camion = ruta.camion;
+        const latitud = ruta.latitudActual ?? camion?.latitudActual;
+        const longitud = ruta.longitudActual ?? camion?.longitudActual;
+
+        if (!camion?.id || !coordenadasValidas(latitud, longitud)) {
+            return;
+        }
+
+        const marcador = L.marker([latitud, longitud], {
+            icon: L.divIcon({
+                className: 'camion-en-movimiento-icono',
+                html: '🚛',
+                iconSize: [34, 34],
+                iconAnchor: [17, 17]
+            })
+        }).bindPopup(`<strong>Camión: ${escaparHtml(camion.patente)}</strong>`);
+
+        marcador.addTo(map);
+        marcadoresCamiones.set(String(camion.id), marcador);
+    }
+
+    rutas.forEach(agregarMarcadorCamion);
+
+    function rutaCoincideConFiltros(punto, texto, estado, soloConCamion) {
+        const coincideTexto = !texto
+            || punto.origen.toLowerCase().includes(texto)
+            || punto.destino.toLowerCase().includes(texto)
+            || punto.patente.toLowerCase().includes(texto);
+        const coincideEstado = estado === 'todos' || punto.estado === estado;
+        const coincideCamion = !soloConCamion || punto.patente !== 'Sin asignar';
+        return coincideTexto && coincideEstado && coincideCamion;
+    }
+
+    function aplicarFiltrosMapa() {
+        const texto = document.getElementById('filtroMapa').value.trim().toLowerCase();
+        const estado = document.getElementById('filtroEstado').value;
+        const soloConCamion = document.getElementById('filtroCamion').checked;
+        let rutasVisibles = 0;
+
+        gruposMarcadores.forEach(({marcador, grupo}) => {
+            const puntosVisibles = grupo.puntos.filter(punto =>
+                rutaCoincideConFiltros(punto, texto, estado, soloConCamion)
+            );
+            const visible = puntosVisibles.length > 0;
+            if (visible) {
+                rutasVisibles += puntosVisibles.length;
+                if (!map.hasLayer(marcador)) marcador.addTo(map);
+            } else if (map.hasLayer(marcador)) {
+                map.removeLayer(marcador);
+            }
+        });
+
+        rutasVisuales.forEach((rutaVisual) => {
+            const visible = rutaVisual.rutas.some(ruta =>
+                rutaCoincideConFiltros({
+                    origen: ruta.origen,
+                    destino: ruta.destino,
+                    patente: ruta.camion?.patente ?? 'Sin asignar',
+                    estado: ruta.estado
+                }, texto, estado, soloConCamion)
+            );
+
+            if (rutaVisual.control) {
+                if (visible && !rutaVisual.control._map) {
+                    rutaVisual.control.addTo(map);
+                } else if (!visible && rutaVisual.control._map) {
+                    map.removeControl(rutaVisual.control);
+                }
+            }
+
+            if (rutaVisual.lineaRecta) {
+                if (visible && !map.hasLayer(rutaVisual.lineaRecta)) {
+                    rutaVisual.lineaRecta.addTo(grupoRutas);
+                } else if (!visible && map.hasLayer(rutaVisual.lineaRecta)) {
+                    grupoRutas.removeLayer(rutaVisual.lineaRecta);
+                }
+            }
+        });
+
+        marcadoresCamiones.forEach((marcador, camionId) => {
+            const tieneRutaVisible = rutas.some(ruta =>
+                String(ruta.camion?.id) === camionId &&
+                rutaCoincideConFiltros({
+                    origen: ruta.origen,
+                    destino: ruta.destino,
+                    patente: ruta.camion?.patente ?? 'Sin asignar',
+                    estado: ruta.estado
+                }, texto, estado, soloConCamion)
+            );
+            if (tieneRutaVisible && !map.hasLayer(marcador)) marcador.addTo(map);
+            if (!tieneRutaVisible && map.hasLayer(marcador)) map.removeLayer(marcador);
+        });
+
+        document.getElementById('resumenMapa').textContent =
+            `${rutasVisibles} punto${rutasVisibles === 1 ? '' : 's'} visible${rutasVisibles === 1 ? '' : 's'}`;
+    }
+
+    document.getElementById('filtroMapa').addEventListener('input', aplicarFiltrosMapa);
+    document.getElementById('filtroEstado').addEventListener('change', aplicarFiltrosMapa);
+    document.getElementById('filtroCamion').addEventListener('change', aplicarFiltrosMapa);
+    document.getElementById('limpiarFiltros').addEventListener('click', () => {
+        document.getElementById('filtroMapa').value = '';
+        document.getElementById('filtroEstado').value = 'todos';
+        document.getElementById('filtroCamion').checked = false;
+        aplicarFiltrosMapa();
+    });
+
+    function actualizarMarcadorCamion(ubicacion) {
+        if (!ubicacion?.camionId || !coordenadasValidas(ubicacion.latitud, ubicacion.longitud)) {
+            return;
+        }
+
+        const marcador = marcadoresCamiones.get(String(ubicacion.camionId));
+        if (marcador) {
+            marcador.setLatLng([ubicacion.latitud, ubicacion.longitud]);
+            return;
+        }
+
+        const rutaConCamion = rutas.find(ruta =>
+            String(ruta.camion?.id) === String(ubicacion.camionId)
+        );
+        if (!rutaConCamion?.camion) return;
+
+        const marcadorNuevo = L.marker([ubicacion.latitud, ubicacion.longitud], {
+            icon: L.divIcon({
+                className: 'camion-en-movimiento-icono',
+                html: '🚛',
+                iconSize: [34, 34],
+                iconAnchor: [17, 17]
+            })
+        }).bindPopup(`<strong>Camión: ${escaparHtml(rutaConCamion.camion.patente)}</strong>`).addTo(map);
+        marcadoresCamiones.set(String(ubicacion.camionId), marcadorNuevo);
+    }
+
+    if (typeof SockJS !== 'undefined' && typeof Stomp !== 'undefined') {
+        const socket = new SockJS('/ws/location');
+        const clienteStomp = Stomp.over(socket);
+        clienteStomp.debug = null;
+        clienteStomp.connect({}, () => {
+            clienteStomp.subscribe('/topic/ubicaciones', mensaje =>
+                actualizarMarcadorCamion(JSON.parse(mensaje.body))
+            );
+            clienteStomp.subscribe('/topic/ubicaciones-rutas', mensaje =>
+                actualizarMarcadorCamion(JSON.parse(mensaje.body))
+            );
+        }, (error) => console.warn('No se pudo conectar al seguimiento en vivo:', error));
+    }
+
+    aplicarFiltrosMapa();
+
+    // MAGIA DE CÁMARA
     try {
         if (grupoRutas.getLayers().length > 0) {
             setTimeout(() => {

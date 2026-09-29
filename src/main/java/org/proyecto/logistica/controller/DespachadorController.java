@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
+import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -66,6 +67,7 @@ public class DespachadorController {
 
         ruta.setCamion(camion);
         ruta.setEstado("en_progreso");
+        ruta.setStart_time(LocalDateTime.now());
         camion.setEstado("en_ruta");
 
         camionRepository.save(camion);

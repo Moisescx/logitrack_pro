@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/v1/despachador")
@@ -106,6 +107,7 @@ public class DespachadorRestController {
 
             ruta.setCamion(camion);
             ruta.setEstado("en_progreso");
+            ruta.setStart_time(LocalDateTime.now());
             camion.setEstado("en_ruta");
 
             camionRepository.save(camion);

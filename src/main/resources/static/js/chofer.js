@@ -198,6 +198,86 @@ function startTripCountdown(routeId) {
     }, 1000);
 }
 
+const descansoIntervals = {};
+
+function formatearDuracion(segundos) {
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const segundosRestantes = segundos % 60;
+    return [horas, minutos, segundosRestantes]
+        .map(valor => String(valor).padStart(2, '0'))
+        .join(':');
+}
+
+function actualizarPanelDescanso(panel) {
+    const routeId = panel.dataset.routeId;
+    const contador = document.getElementById('descanso-contador');
+    const estado = document.getElementById('descanso-estado');
+    const mensaje = document.getElementById('descanso-mensaje');
+    const iniciarBtn = document.getElementById('iniciar-descanso-btn');
+    const finalizarBtn = document.getElementById('finalizar-descanso-btn');
+
+    fetch('/api/rutas/' + routeId + '/descanso')
+        .then(response => {
+            if (!response.ok) throw new Error('No se pudo obtener el estado de descanso');
+            return response.json();
+        })
+        .then(data => {
+            if (data.enDescanso) {
+                const restante = Number(data.restanteDescansoSegundos || 0);
+                contador.textContent = formatearDuracion(restante);
+                estado.textContent = restante > 0 ? 'Descanso obligatorio en curso' : 'Descanso cumplido';
+                mensaje.textContent = restante > 0
+                    ? 'El descanso debe completarse antes de volver a conducir.'
+                    : 'Ya puedes finalizar el descanso.';
+                iniciarBtn.classList.add('hidden');
+                finalizarBtn.classList.toggle('hidden', restante > 0);
+                return;
+            }
+
+            const restante = Number(data.restanteConduccionSegundos || 0);
+            contador.textContent = formatearDuracion(restante);
+            estado.textContent = data.descansoRequerido
+                ? 'Descanso obligatorio pendiente'
+                : 'Conducción activa';
+            mensaje.textContent = data.descansoRequerido
+                ? 'Has alcanzado el máximo de 5 horas de conducción continua.'
+                : 'Tiempo restante para el descanso obligatorio.';
+            iniciarBtn.classList.toggle('hidden', !data.descansoRequerido);
+            finalizarBtn.classList.add('hidden');
+        })
+        .catch(error => {
+            estado.textContent = 'No disponible';
+            mensaje.textContent = error.message;
+        });
+}
+
+function iniciarControlDescanso(panel) {
+    actualizarPanelDescanso(panel);
+    const routeId = panel.dataset.routeId;
+    descansoIntervals[routeId] = setInterval(() => actualizarPanelDescanso(panel), 1000);
+
+    document.getElementById('iniciar-descanso-btn').addEventListener('click', () => {
+        fetch('/api/rutas/' + routeId + '/descanso/iniciar', {method: 'POST'})
+            .then(response => {
+                if (!response.ok) throw new Error('No se pudo iniciar el descanso');
+                return response.json();
+            })
+            .then(() => actualizarPanelDescanso(panel))
+            .catch(error => alert(error.message));
+    });
+
+    document.getElementById('finalizar-descanso-btn').addEventListener('click', () => {
+        fetch('/api/rutas/' + routeId + '/descanso/finalizar', {method: 'POST'})
+            .then(response => {
+                if (!response.ok) throw new Error('Todavía no se cumplen las 2 horas de descanso');
+                return response.json();
+            })
+            .then(() => actualizarPanelDescanso(panel))
+            .catch(error => alert(error.message));
+    });
+}
+
 // Función auxiliar para mantener el código limpio
 function activarBotonFinalizar(routeId) {
     const finalizeBtn = document.getElementById('finalize-btn-' + routeId);
@@ -277,6 +357,9 @@ function enviarAlerta(tipoProblema) {
 // 4. INICIALIZACIÓN DE LA PÁGINA
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
+    const panelDescanso = document.querySelector('[id^="descanso-panel-"]');
+    if (panelDescanso) iniciarControlDescanso(panelDescanso);
+
     conectarWebSocket();
 
     document.querySelectorAll('.finalize-btn').forEach(btn => {
@@ -285,11 +368,9 @@ window.addEventListener('DOMContentLoaded', () => {
         const startIso = btn.getAttribute('data-start-time');
 
         if (startIso) {
-            let isoToParse = startIso;
-            const hasTimezone = isoToParse.endsWith('Z') || isoToParse.includes('+') || isoToParse.substring(10).includes('-');
-            if (!hasTimezone) isoToParse += 'Z';
-
-            const startMs = Date.parse(isoToParse);
+            // LocalDateTime viene sin zona horaria; el navegador lo interpreta
+            // en la zona local en lugar de convertirlo artificialmente a UTC.
+            const startMs = Date.parse(startIso.replace(' ', 'T'));
             if (!isNaN(startMs)) {
                 const elapsedFloat = (Date.now() - startMs) / 1000;
                 tripRemaining[id] = Math.max(0, Math.ceil(60 - elapsedFloat));

@@ -51,13 +51,22 @@ public class MapaController {
         // Convertir a DTOs simples (Map) para evitar problemas de lazy-loading/serialización en la vista
         List<java.util.Map<String, Object>> rutasDto = rutasParaElMapa.stream().map(r -> {
             java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("id", r.getId());
             m.put("origen", r.getOrigen());
             m.put("destino", r.getDestino());
             m.put("estado", r.getEstado());
+            m.put("latitudInicio", r.getLatitudInicio());
+            m.put("longitudInicio", r.getLongitudInicio());
+            m.put("latitudFin", r.getLatitudFin());
+            m.put("longitudFin", r.getLongitudFin());
+            m.put("latitudActual", r.getLatitudActual());
+            m.put("longitudActual", r.getLongitudActual());
             if (r.getCamion() != null) {
                 java.util.Map<String, Object> cam = new java.util.HashMap<>();
                 cam.put("patente", r.getCamion().getPatente());
                 cam.put("id", r.getCamion().getId());
+                cam.put("latitudActual", r.getCamion().getLatitudActual());
+                cam.put("longitudActual", r.getCamion().getLongitudActual());
                 m.put("camion", cam);
             } else {
                 m.put("camion", null);

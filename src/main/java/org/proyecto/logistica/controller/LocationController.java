@@ -60,10 +60,14 @@ public class LocationController {
         if (!GpsService.validarCoordenadas(ubicacion.getLatitud(), ubicacion.getLongitud())) {
             throw new IllegalArgumentException("Coordenadas GPS inválidas");
         }
+        if (ubicacion.getRutaId() == null) {
+            throw new IllegalArgumentException("La ruta es obligatoria");
+        }
 
         // Guardamos ubicación (requiere rutaId en el DTO)
-        UbicacionHistorial historial = ubicacionService.guardarUbicacion(
+        UbicacionHistorial historial = ubicacionService.guardarUbicacionConRuta(
             ubicacion.getCamionId(),
+            ubicacion.getRutaId(),
             ubicacion.getLatitud(),
             ubicacion.getLongitud(),
             ubicacion.getVelocidad() != null ? ubicacion.getVelocidad() : 0.0,

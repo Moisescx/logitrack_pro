@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UbicacionDTO {
     private Long camionId;
+    private Long rutaId;
     private Double latitud;
     private Double longitud;
     private Double velocidad;

@@ -21,6 +21,12 @@ public class Ruta {
 
     private LocalDateTime start_time;
 
+    @Column(name = "inicio_descanso")
+    private LocalDateTime inicioDescanso;
+
+    @Column(name = "tiempo_descanso_segundos")
+    private Long tiempoDescansoSegundos = 0L;
+
     // GPS Tracking - Nuevos campos
     @Column(name = "latitud_inicio")
     private Double latitudInicio;
@@ -47,4 +53,3 @@ public class Ruta {
     private LocalDateTime tiempoActualizacion;
 
 }
-
